@@ -18,8 +18,6 @@ typedef struct stack_t
 {
 	Node * top;
 	unsigned int size;
-	unsigned int multiplier;
-	unsigned int threshold;
 	pthread_mutex_t mutex;
 
 } Stack;

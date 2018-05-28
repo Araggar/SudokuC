@@ -5,6 +5,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "semaphore.h"
+#include <math.h>
 
 #include "./include/stack.h"
 
@@ -63,9 +64,11 @@ void* solve_sudoku(void* args){
 	bool found;
 	bool next;
 	int sem_value;
+	int stacking_criteria;
 
 	// Copy sudoku
 	unsigned int *sudoku_copy;
+	int total_mem;
 
 	while (1) {
 		sem_getvalue(&sem_sentinel, &sem_value);
@@ -83,6 +86,8 @@ void* solve_sudoku(void* args){
 		data = stackpop(&stack);
 		ind = data->start_ind;
 		start_line = (ind/size2);
+		total_mem = (log((sizeof(Data)*stack.size)/2000000000) + 1) > 0 ? (log((sizeof(Data)*stack.size)/1000000000) + 1)*size2: 0;
+		stacking_criteria = start_line + total_mem;
 		found = true;
 		next = true;
 
@@ -91,7 +96,7 @@ void* solve_sudoku(void* args){
 		memcpy(sudoku_copy, data->state, sizeof(unsigned int)*size4); 
 
 		/// Sudoku recursive loop
-		while(ind/size2 >= start_line && ind/size2 <= start_line) {
+		while(ind/size2 >= start_line && ind/size2 <= stacking_criteria) {
 			if (data->state[ind]==0) {
 				// When an empty space is found, test up from the last number recorded on the copy
 				found = false;
@@ -116,9 +121,9 @@ void* solve_sudoku(void* args){
 					aux_data->start_ind = size4;
 					stackpush(&stack_final, aux_data);
 					next = false;
-				} else if ((ind+1)/size2 > start_line) { // TODO: Memory constraints/ Stacking Criteria
-					// Stack the partial sudoku on the stack
-					printf("OH SHIT WHERE DID MY MEMORY GO. Stack Size: %u\n", stack.size);
+				} else if ((ind+1)/size2 > stacking_criteria) { // TODO: Memory constraints/ Stacking Criteria
+					// Stack the partial sudoku
+					printf("Stack Size: %u, Solutions: %u\n", stack.size, stack_final.size);
 					Data *aux_data = malloc(sizeof(Data));
 					unsigned int *aux_sudoku = malloc(sizeof(unsigned int)*size4);
 					memcpy(aux_sudoku, sudoku_copy, sizeof(unsigned int)*size4);
@@ -140,6 +145,7 @@ void* solve_sudoku(void* args){
 		}
 		// Free memory
 		free(data->state);
+		free(data);
 		free(sudoku_copy);
 		sem_wait(&sem_sentinel);
 	}
@@ -164,7 +170,7 @@ int main(int argc, char const *argv[])
 	pthread_barrier_init(&thread_barrier, NULL, 2);
 	stackinit(&stack);
 	stackinit(&stack_final);
-	unsigned int initial_sudoku[size4];
+	unsigned int *initial_sudoku = malloc(sizeof(unsigned int)*size4);
 	MAX_THREADS = atoi(argv[1]);
 
 	// Sudoku Scan
@@ -191,14 +197,13 @@ int main(int argc, char const *argv[])
 	printf("Size %i\n", size);
 	printf("Initial Sudoku:\n");
 	print_sudoku(initial_sudoku);
-	printf("One Line Solutions\n");
 	unsigned int stacksize = stack_final.size;
-	printf("%u Solutions\n", stacksize);
 	for (unsigned int i = 0; i < stacksize; ++i) {
 		print_sudoku(stackpop(&stack_final)->state);
 	}
 
 	/// END DEBUG ///
+	printf("Solutions Found :%u\n", stacksize);
 	printf("%s\n", "Done");
 	return 0;
 }

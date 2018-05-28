@@ -1,11 +1,11 @@
 BIN=sudoku
 CC=gcc
-LB=-L ./library/
-LD=-lstack -lpthread 
+LB=-L library
+LD=-lpthread -lm
 FLAGS=-O3
 
 all: sudoku.c
-	$(CC) -o $(BIN) sudoku.c $(LB) $(LD) $(FLAGS)
+	$(CC) -o $(BIN) sudoku.c library/stack.c $(LB) $(LD) $(FLAGS)
 
 clean:
 	rm -rf $(BIN) *~
